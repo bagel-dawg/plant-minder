@@ -6,7 +6,7 @@ import csv
 from apscheduler.scheduler import Scheduler
 import pandas as pd
 import matplotlib.pyplot as plt
-
+import matplotlib.dates as mdates
 
 DHT_SENSOR = Adafruit_DHT.DHT22
 DHT_PIN = 4
@@ -50,10 +50,16 @@ def log_environment():
                          index_col=0, 
                          parse_dates=[0], dayfirst=True, 
                          names=['time','temperature','humidity'])
+
+    fig, ax = plt.subplots()
+    ax.plot(df.index, df.values)
+    ax.set_xticks(df.index)
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
+    ax.xaxis.set_minor_formatter(mdates.DateFormatter("%Y-%m"))
+
     df.plot()
 
     plt.savefig('static/graph.png')
-        
 
 @app.route('/')
 def index():
