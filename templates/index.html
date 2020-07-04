@@ -1,0 +1,31 @@
+{% include 'header.html' %}
+    <body>
+
+        <style type="text/css">
+            .tg  {border-collapse:collapse;border-spacing:0;}
+            .tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+              overflow:hidden;padding:10px 5px;word-break:normal;}
+            .tg th{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+              font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}
+            .tg .tg-0lax{text-align:left;vertical-align:top}
+            </style>
+            <table class="tg">
+            <thead>
+              <tr>
+                <th class="tg-0lax">Days Since Germination</th>
+                <th class="tg-0lax">Current Temp</th>
+                <th class="tg-0lax">Current humidity</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="tg-0lax">{{ days_since }}</td>
+                <td class="tg-0lax">{{ temperature }}</td>
+                <td class="tg-0lax">{{ humidity }}</td>
+              </tr>
+            </tbody>
+            </table>
+            <img src="/static/graph.png">
+
+    </body>
+{% include 'footer.html' %}
