@@ -26,6 +26,11 @@ cron.start()
 def log_environment():
     csv_file_name = 'static/environment_history.csv'
 
+    environment = environment_stats()
+
+    if environment['temperature'] is None or environment['humidity'] is None:
+        return None
+
     with open(csv_file_name,"r") as f:
         lines = f.read().splitlines()  # read out the contents of the file
 
@@ -36,14 +41,14 @@ def log_environment():
                 csv_writer = csv.writer(f_temp, delimiter=',', quoting=csv.QUOTE_NONE, quotechar='', escapechar='\\')
                 f_temp.write(line + '\n')
             
-            csv_writer.writerow([ datetime.now(), temperature()['temperature'], humidity()['humidity'] ])
+            csv_writer.writerow([ datetime.now(), environment['temperature'], environment['humidity'] ])
     else:
         with open(csv_file_name + "_temp","w+") as f_temp:
             csv_writer = csv.writer(f_temp, delimiter=',', quoting=csv.QUOTE_NONE, quotechar='', escapechar='\\')           
             for line in lines:
                 f_temp.write(line + '\n')
              
-            csv_writer.writerow([ datetime.now(), temperature()['temperature'], humidity()['humidity'] ])
+            csv_writer.writerow([ datetime.now(), environment['temperature'], environment['humidity'] ])
 
     f.close()
     f_temp.close()
@@ -64,25 +69,33 @@ def log_environment():
     df.plot()
 
     plt.savefig('static/graph.png')
+    plt.close()
 
 @app.route('/')
 def index():
-    return render_template('index.html', plant_name=plant_name, days_since=days_since()['days_since'], temperature=temperature()['temperature'], humidity=humidity()['humidity'] )
+    environment = environment_stats()
+    return render_template('index.html', plant_name=plant_name, days_since=days_since()['days_since'], temperature=environment['temperature'], humidity=environment['humidity'] )
 
-@app.route('/temperature')
-def temperature():
-    temperature_reading = Adafruit_DHT.read_retry(DHT_SENSOR, DHT_PIN)[1]
-    temperature_reading = (temperature_reading * 9/5) + 32
-    return { 'temperature' : str(round(temperature_reading,2)) }
+@app.route('/environment_stats')
+def environment_stats():
+    temperature, humidity = Adafruit_DHT.read_retry(DHT_SENSOR, DHT_PIN)
 
-@app.route('/humidity')
-def humidity():
-    return { 'humidity' : str(round(Adafruit_DHT.read_retry(DHT_SENSOR, DHT_PIN)[0],2)) }
+    if temperature > 100 or temperature is None:
+        temperature = None
+    else:
+        temperature = (temperature * 9/5) + 32
+        temperature = round(temperature,2)
+
+    if humidity > 100 or humidity is None:
+        humidity = None
+    else:
+        humidity = round(humidity, 2)
+
+    return { 'temperature' : str(temperature), 'humidity' : str(humidity) }
 
 @app.route('/days_since')
 def days_since():
     return { 'days_since' : str((date.today() - starting_date).days) }
-
 
 @app.after_request
 def add_header(response):
