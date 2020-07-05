@@ -7,6 +7,7 @@ from apscheduler.scheduler import Scheduler
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import os
 
 DHT_SENSOR = Adafruit_DHT.DHT22
 DHT_PIN = 4
@@ -29,22 +30,25 @@ def log_environment():
         lines = f.read().splitlines()  # read out the contents of the file
 
     if len(lines) >= 2016:
-       with open(csv_file_name,"w") as f:
-            csv_writer = csv.writer(f, delimiter=',')
+       with open(csv_file_name + "_temp","w+") as f_temp:
+            csv_writer = csv.writer(f_temp, delimiter=',')
             for line in lines[1:]:
-                csv_writer = csv.writer(f, delimiter=',', quoting=csv.QUOTE_NONE, quotechar='', escapechar='\\')
-                f.write(line + '\n')
+                csv_writer = csv.writer(f_temp, delimiter=',', quoting=csv.QUOTE_NONE, quotechar='', escapechar='\\')
+                f_temp.write(line + '\n')
             
             csv_writer.writerow([ datetime.now(), temperature()['temperature'], humidity()['humidity'] ])
     else:
-        with open(csv_file_name,"w") as f:
-            csv_writer = csv.writer(f, delimiter=',', quoting=csv.QUOTE_NONE, quotechar='', escapechar='\\')           
+        with open(csv_file_name + "_temp","w+") as f_temp:
+            csv_writer = csv.writer(f_temp, delimiter=',', quoting=csv.QUOTE_NONE, quotechar='', escapechar='\\')           
             for line in lines:
-                f.write(line + '\n')
-            
+                f_temp.write(line + '\n')
+             
             csv_writer.writerow([ datetime.now(), temperature()['temperature'], humidity()['humidity'] ])
 
     f.close()
+    f_temp.close()
+
+    os.replace(csv_file_name+"_temp", csv_file_name)
 
     df = pd.read_csv(csv_file_name, delimiter=',', 
                          index_col=0, 
@@ -54,8 +58,8 @@ def log_environment():
     fig, ax = plt.subplots()
     ax.plot(df.index, df.values)
     ax.set_xticks(df.index)
-    ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
-    ax.xaxis.set_minor_formatter(mdates.DateFormatter("%Y-%m"))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%m-%d"))
+    ax.xaxis.set_minor_formatter(mdates.DateFormatter("%m-%d"))
 
     df.plot()
 
