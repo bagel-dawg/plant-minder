@@ -84,7 +84,7 @@ def log_environment():
     df.plot()
 
     plt.savefig('static/graph.png')
-    plt.close()
+    plt.close('all')
 
 @app.route('/')
 def index():
