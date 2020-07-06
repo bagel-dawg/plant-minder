@@ -7,6 +7,7 @@ from apscheduler.scheduler import Scheduler
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import numpy as np
 from scipy import stats
 import os
 import logging
