@@ -1,0 +1,14 @@
+[Unit]
+Description=Spacebucket web application
+After=network.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/spacebucket
+Environment=FLASK_CONFIG=production
+ExecStart=/home/pi/.local/bin/gunicorn -b 0.0.0.0:80 -w 2 app:app
+Restart=always
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target
