@@ -34,7 +34,7 @@ cron = Scheduler(daemon=True)
 # Explicitly kick off the background thread
 cron.start()
 
-@cron.interval_schedule(seconds=5)
+@cron.interval_schedule(minutes=5)
 def log_environment():
     csv_file_name = 'static/environment_history.csv'
 
