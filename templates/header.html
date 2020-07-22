@@ -1,4 +1,23 @@
 <html>
     <head>
         <title>{{ plant_name }}</title>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+
+        <script>
+        $(function(){
+            setInterval(function(){
+                $.ajax({
+                  url: "/environment_stats",
+                  type: "get",
+                  success: function(response) {
+                    $("#environment_stats_table #data #temperature").html(response['temperature']);
+                    $("#environment_stats_table #data #humidity").html(response['humidity']);
+                  },
+                  error: function(xhr) {
+                    //Do Something to handle error
+                  }
+                });
+            },10000);
+        });
+        </script>
     </head>

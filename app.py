@@ -12,11 +12,12 @@ from scipy import stats
 import os
 import logging
 from logging import Formatter, FileHandler
+import requests
 
 DHT_SENSOR = Adafruit_DHT.DHT22
 DHT_PIN = 4
 
-starting_date = date(2020, 7, 1)
+starting_date = date(2020, 7, 13)
 plant_name = "Aphrodite"
 
 logger = logging.getLogger()
@@ -53,14 +54,14 @@ def log_environment():
             for line in lines[1:]:
                 csv_writer = csv.writer(f_temp, delimiter=',', quoting=csv.QUOTE_NONE, quotechar='', escapechar='\\')
                 f_temp.write(line + '\n')
-            
+
             csv_writer.writerow([ datetime.now(), environment['temperature'], environment['humidity'] ])
     else:
         with open(csv_file_name + "_temp","w+") as f_temp:
-            csv_writer = csv.writer(f_temp, delimiter=',', quoting=csv.QUOTE_NONE, quotechar='', escapechar='\\')           
+            csv_writer = csv.writer(f_temp, delimiter=',', quoting=csv.QUOTE_NONE, quotechar='', escapechar='\\')
             for line in lines:
                 f_temp.write(line + '\n')
-             
+
             csv_writer.writerow([ datetime.now(), environment['temperature'], environment['humidity'] ])
 
     f.close()
@@ -68,9 +69,9 @@ def log_environment():
 
     os.replace(csv_file_name+"_temp", csv_file_name)
 
-    df = pd.read_csv(csv_file_name, delimiter=',', 
-                         index_col=0, 
-                         parse_dates=[0], dayfirst=True, 
+    df = pd.read_csv(csv_file_name, delimiter=',',
+                         index_col=0,
+                         parse_dates=[0], dayfirst=True,
                          names=['time','temperature','humidity'])
 
     df = df[(np.abs(stats.zscore(df)) < 3).all(axis=1)]
@@ -88,7 +89,10 @@ def log_environment():
 
 @app.route('/')
 def index():
-    environment = environment_stats()
+    environment = requests.get('http://localhost:80/environment_stats').json()
+
+    logger.info(environment)
+
     return render_template('index.html', plant_name=plant_name, days_since=days_since()['days_since'], temperature=environment['temperature'], humidity=environment['humidity'] )
 
 @app.route('/environment_stats')
@@ -97,7 +101,7 @@ def environment_stats():
 
     logger.info('DHT22: Temperature reading: {temp}, Humidity reading: {humid}'.format(temp=temperature, humid=humidity))
 
-    if temperature > 100 or temperature is None:
+    if (temperature > 100) or (temperature is None):
         temperature = None
         logger.info('Temperature reading was over 100 or was none, something is probably wrong...')
     else:
