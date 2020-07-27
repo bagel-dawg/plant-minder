@@ -1,18 +1,16 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, Response
 from datetime import datetime, date
 import Adafruit_DHT
 import atexit
 import csv
 from apscheduler.scheduler import Scheduler
-import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-import numpy as np
-from scipy import stats
 import os
 import logging
 from logging import Formatter, FileHandler
 import requests
+import time
+import json
+import sqlite3
 
 DHT_SENSOR = Adafruit_DHT.DHT22
 DHT_PIN = 4
@@ -48,7 +46,7 @@ def log_environment():
     with open(csv_file_name,"r") as f:
         lines = f.read().splitlines()  # read out the contents of the file
 
-    if len(lines) >= 2016:
+    if len(lines) >= 720:
        with open(csv_file_name + "_temp","w+") as f_temp:
             csv_writer = csv.writer(f_temp, delimiter=',')
             for line in lines[1:]:
@@ -114,11 +112,15 @@ def environment_stats():
     else:
         humidity = round(humidity, 2)
 
-    return { 'temperature' : str(temperature), 'humidity' : str(humidity) }
+    return { 'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S') , 'temperature' : str(temperature), 'humidity' : str(humidity) }
 
 @app.route('/days_since')
 def days_since():
     return { 'days_since' : str((date.today() - starting_date).days) }
+
+@app.route('/graph')
+def graph():
+    return render_template('graph.html')
 
 @app.after_request
 def add_header(response):
