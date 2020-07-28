@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, Response
+from flask import Flask, request, jsonify, render_template, Response, current_app, g
 from datetime import datetime, date
 import Adafruit_DHT
 import atexit
@@ -11,12 +11,16 @@ import requests
 import time
 import json
 import sqlite3
+import click
 
 DHT_SENSOR = Adafruit_DHT.DHT22
 DHT_PIN = 4
 
 starting_date = date(2020, 7, 13)
 plant_name = "Aphrodite"
+
+app = Flask(__name__, instance_relative_config=True)
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 1
 
 logger = logging.getLogger()
 handler = logging.StreamHandler()
@@ -27,63 +31,58 @@ handler.setFormatter(Formatter(
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
-app = Flask(__name__)
-app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 1
+def get_db():
+    db = getattr(g, '_database', None)
+    if db is None:
+        db = g._database = sqlite3.connect(os.getenv('DATABASE', '/tmp/spacebucket'))
+    return db
+
+@app.teardown_appcontext
+def close_connection(exception):
+    db = getattr(g, '_database', None)
+    if db is not None:
+        db.close()
+
+def init_db():
+
+    with app.app_context():
+        db = get_db()
+
+        with app.open_resource('schema.sql') as f:
+            db.executescript(f.read().decode('utf8'))
+        db.commit()
+
+@click.command('init-db')
+def init_db_command():
+    """Clear the existing data and create new tables."""
+    init_db()
+    click.echo('Initialized the database.')
+
+def init_app(app):
+    app.teardown_appcontext(close_connection)
+    app.cli.add_command(init_db_command)
+
+
+init_app(app)
 
 cron = Scheduler(daemon=True)
 # Explicitly kick off the background thread
 cron.start()
 
-@cron.interval_schedule(minutes=5)
+@cron.interval_schedule(seconds=5)
 def log_environment():
-    csv_file_name = 'static/environment_history.csv'
 
-    environment = environment_stats()
+    with app.app_context():
+        db = get_db()
+        environment = environment_stats()
 
-    if environment['temperature'] is None or environment['humidity'] is None:
-        return None
+        if environment['temperature'] is None or environment['humidity'] is None:
+            return None
 
-    with open(csv_file_name,"r") as f:
-        lines = f.read().splitlines()  # read out the contents of the file
-
-    if len(lines) >= 720:
-       with open(csv_file_name + "_temp","w+") as f_temp:
-            csv_writer = csv.writer(f_temp, delimiter=',')
-            for line in lines[1:]:
-                csv_writer = csv.writer(f_temp, delimiter=',', quoting=csv.QUOTE_NONE, quotechar='', escapechar='\\')
-                f_temp.write(line + '\n')
-
-            csv_writer.writerow([ datetime.now(), environment['temperature'], environment['humidity'] ])
-    else:
-        with open(csv_file_name + "_temp","w+") as f_temp:
-            csv_writer = csv.writer(f_temp, delimiter=',', quoting=csv.QUOTE_NONE, quotechar='', escapechar='\\')
-            for line in lines:
-                f_temp.write(line + '\n')
-
-            csv_writer.writerow([ datetime.now(), environment['temperature'], environment['humidity'] ])
-
-    f.close()
-    f_temp.close()
-
-    os.replace(csv_file_name+"_temp", csv_file_name)
-
-    df = pd.read_csv(csv_file_name, delimiter=',',
-                         index_col=0,
-                         parse_dates=[0], dayfirst=True,
-                         names=['time','temperature','humidity'])
-
-    df = df[(np.abs(stats.zscore(df)) < 3).all(axis=1)]
-
-    fig, ax = plt.subplots()
-    ax.plot(df.index, df.values)
-    ax.set_xticks(df.index)
-    ax.xaxis.set_major_formatter(mdates.DateFormatter("%m-%d"))
-    ax.xaxis.set_minor_formatter(mdates.DateFormatter("%m-%d"))
-
-    df.plot()
-
-    plt.savefig('static/graph.png')
-    plt.close('all')
+        db.execute(
+            "INSERT INTO environment (env_timestamp, temperature, humidity) VALUES (?, ?, ?)", (environment['time'], environment['temperature'], environment['humidity']),
+        )
+        db.commit()
 
 @app.route('/')
 def index():
@@ -118,13 +117,8 @@ def environment_stats():
 def days_since():
     return { 'days_since' : str((date.today() - starting_date).days) }
 
-@app.route('/graph')
-def graph():
-    return render_template('graph.html')
-
 @app.after_request
 def add_header(response):
-    # response.cache_control.no_store = True
     if 'Cache-Control' not in response.headers:
         response.headers['Cache-Control'] = 'no-store'
     return response
@@ -132,3 +126,5 @@ def add_header(response):
 atexit.register(lambda: cron.shutdown(wait=False))
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
+
+

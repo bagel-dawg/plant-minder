@@ -4,8 +4,10 @@ After=network.target
 
 [Service]
 User=pi
-WorkingDirectory=/home/pi/spacebucket
+WorkingDirectory=/home/pi/spacebucket/spacebucket
 Environment=FLASK_CONFIG=production
+Environment=FLASK_APP=spacebucket
+Environment=DATABASE=/home/pi/spacebucket/spacebucket.sqlite
 ExecStart=/home/pi/.local/bin/gunicorn -b 0.0.0.0:80 -w 2 app:app
 Restart=always
 AmbientCapabilities=CAP_NET_BIND_SERVICE

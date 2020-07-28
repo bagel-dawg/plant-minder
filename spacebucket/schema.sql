@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS environment;CREATE TABLE environment(  id INTEGER PRIMARY KEY AUTOINCREMENT,  env_timestamp TEXT  NOT NULL,  temperature TEXT NOT NULL,  humidity TEXT NOT NULL);
