@@ -69,7 +69,7 @@ cron = Scheduler(daemon=True)
 # Explicitly kick off the background thread
 cron.start()
 
-@cron.interval_schedule(seconds=5)
+@cron.interval_schedule(seconds=180)
 def log_environment():
 
     with app.app_context():
