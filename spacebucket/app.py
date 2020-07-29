@@ -12,6 +12,8 @@ import time
 import json
 import sqlite3
 import click
+from graph import generate_graph
+from datetime import datetime, timedelta
 
 DHT_SENSOR = Adafruit_DHT.DHT22
 DHT_PIN = 4
@@ -69,7 +71,7 @@ cron = Scheduler(daemon=True)
 # Explicitly kick off the background thread
 cron.start()
 
-@cron.interval_schedule(seconds=180)
+@cron.interval_schedule(seconds=30)
 def log_environment():
 
     with app.app_context():
@@ -84,13 +86,22 @@ def log_environment():
         )
         db.commit()
 
+        # Generate weekly, daily, 6-hour, and 30min graphs graphs
+        generate_graph(db_con=db, time_deltas=[
+                                                (datetime.now() - timedelta(minutes=30)),
+                                                (datetime.now() - timedelta(hours=6)),
+                                                (datetime.now() - timedelta(days=1)),
+                                                (datetime.now() - timedelta(days=7))
+                                              ]
+        )
+
 @app.route('/')
 def index():
-    environment = requests.get('http://localhost:80/environment_stats').json()
+    with app.app_context():
+        db = get_db()
+        r =  db.execute("SELECT MAX(id),temperature,humidity FROM environment").fetchone()
 
-    logger.info(environment)
-
-    return render_template('index.html', plant_name=plant_name, days_since=days_since()['days_since'], temperature=environment['temperature'], humidity=environment['humidity'] )
+    return render_template('index.html', plant_name=plant_name, days_since=days_since()['days_since'], temperature=r[1], humidity=r[2])
 
 @app.route('/environment_stats')
 def environment_stats():
